@@ -108,10 +108,39 @@ class GaussianPacket:
 
         self.keyframe = keyframe
         self.current_frame = current_frame
-        self.gtcolor = self.resize_img(gtcolor, 320)
-        self.gtlangauge = self.resize_img(gtlangauge, 320)
-        self.gtdepth = self.resize_img(gtdepth, 320)
-        self.gtnormal = self.resize_img(gtnormal, 320)
+
+        if gtcolor is not None:
+            put = gtcolor
+        elif hasattr(current_frame, "original_image"):
+            put = current_frame.original_image
+        else:
+            put = None
+        self.gtcolor = self.resize_img(put, 320)
+
+        if gtlangauge is not None:
+            put = gtlangauge
+        elif hasattr(current_frame, "gt_lang_feat"):
+            put = current_frame.gt_lang_feat
+        else:
+            put = None
+        self.gtlangauge = self.resize_img(put, 320)
+
+        if gtdepth is not None:
+            put = gtdepth
+        elif hasattr(current_frame, "depth"):
+            put = current_frame.depth
+        else:
+            put = None
+        self.gtdepth = self.resize_img(put, 320)
+
+        if gtnormal is not None:
+            put = gtnormal
+        elif hasattr(current_frame, "normal"):
+            put = current_frame.normal
+        else:
+            put = None
+        self.gtnormal = self.resize_img(put, 320)
+
         self.keyframes = keyframes
         self.finish = finish
         self.kf_window = kf_window
@@ -132,13 +161,9 @@ class GaussianPacket:
         return img.squeeze(0)
 
     def get_covariance(self, scaling_modifier=1):
-        return self.build_covariance_from_scaling_rotation(
-            self.get_scaling, scaling_modifier, self._rotation
-        )
+        return self.build_covariance_from_scaling_rotation(self.get_scaling, scaling_modifier, self._rotation)
 
-    def build_covariance_from_scaling_rotation(
-        self, scaling, scaling_modifier, rotation
-    ):
+    def build_covariance_from_scaling_rotation(self, scaling, scaling_modifier, rotation):
         L = build_scaling_rotation(scaling_modifier * scaling, rotation)
         actual_covariance = L @ L.transpose(1, 2)
         symm = strip_symmetric(actual_covariance)
@@ -168,14 +193,14 @@ class ParamsGUI:
         self,
         pipe=None,
         background=None,
-        #background_language=None,
+        # background_language=None,
         gaussians=None,
         q_main2vis=None,
         q_vis2main=None,
     ):
         self.pipe = pipe
         self.background = background
-        #self.background_language = background_language
+        # self.background_language = background_language
         self.gaussians = gaussians
         self.q_main2vis = q_main2vis
         self.q_vis2main = q_vis2main
