@@ -248,6 +248,10 @@ This work incorporates many open-source codes. We extend our gratitude to the au
 - [MonoGS](https://github.com/muskie82/MonoGS)
 - [LangSplat](https://github.com/minghanqin/LangSplat)
 
+# 🎲 Some Error:
+
+If you see error like LangSupervisedNet doesn't have attribute load_from_checkpoint in self.hr_model.load_from_checkpoint(...). This is the issue of Pytorch-lightning version. Edit those lines to LangSupervisedNet.load_from_checkpoint(...)
+
 # 📖 Citation
 
 If you find this work helpful, please consider citing us:

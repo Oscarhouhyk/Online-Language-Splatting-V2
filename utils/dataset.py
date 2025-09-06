@@ -10,6 +10,7 @@ from PIL import Image
 
 from gaussian_splatting.utils.graphics_utils import focal2fov
 from natsort import natsorted
+
 try:
     import pyrealsense2 as rs
 except Exception:
@@ -44,15 +45,10 @@ class ReplicaParser:
             frames.append(frame)
         self.frames = frames
 
+
 class ReplicaParserv2:
     def __init__(self, input_folder):
         self.input_folder = input_folder
-        # self.train_input_folder = os.path.join(input_folder, "imap/00")
-        # self.train_pose_path = os.path.join(self.train_input_folder, "traj_w_c.txt")
-
-        # self.input_folder = os.path.join(input_folder, "imap/01")
-        # self.pose_path = os.path.join(self.input_folder, "traj_w_c.txt")
-        
         self.color_paths = natsorted(glob.glob(f"{self.input_folder}/rgb/rgb_*.png"))
         self.depth_paths = natsorted(glob.glob(f"{self.input_folder}/depth/depth_*.png"))
         self.n_img = len(self.color_paths)
@@ -67,7 +63,7 @@ class ReplicaParserv2:
         for i in range(self.n_img):
             line = lines[i]
             pose = np.array(list(map(float, line.split()))).reshape(4, 4)
-            #pose = np.linalg.inv(pose)
+            # pose = np.linalg.inv(pose)
             self.poses.append(pose)
             frame = {
                 "file_path": self.color_paths[i],
@@ -77,6 +73,7 @@ class ReplicaParserv2:
 
             frames.append(frame)
         self.frames = frames
+
 
 class TUMParser:
     def __init__(self, input_folder):
@@ -100,9 +97,7 @@ class TUMParser:
                 j = np.argmin(np.abs(tstamp_depth - t))
                 k = np.argmin(np.abs(tstamp_pose - t))
 
-                if (np.abs(tstamp_depth[j] - t) < max_dt) and (
-                    np.abs(tstamp_pose[k] - t) < max_dt
-                ):
+                if (np.abs(tstamp_depth[j] - t) < max_dt) and (np.abs(tstamp_pose[k] - t) < max_dt):
                     associations.append((i, j, k))
 
         return associations
@@ -159,19 +154,13 @@ class EuRoCParser:
     def __init__(self, input_folder, start_idx=0):
         self.input_folder = input_folder
         self.start_idx = start_idx
-        self.color_paths = sorted(
-            glob.glob(f"{self.input_folder}/mav0/cam0/data/*.png")
-        )
-        self.color_paths_r = sorted(
-            glob.glob(f"{self.input_folder}/mav0/cam1/data/*.png")
-        )
+        self.color_paths = sorted(glob.glob(f"{self.input_folder}/mav0/cam0/data/*.png"))
+        self.color_paths_r = sorted(glob.glob(f"{self.input_folder}/mav0/cam1/data/*.png"))
         assert len(self.color_paths) == len(self.color_paths_r)
         self.color_paths = self.color_paths[start_idx:]
         self.color_paths_r = self.color_paths_r[start_idx:]
         self.n_img = len(self.color_paths)
-        self.load_poses(
-            f"{self.input_folder}/mav0/state_groundtruth_estimate0/data.csv"
-        )
+        self.load_poses(f"{self.input_folder}/mav0/state_groundtruth_estimate0/data.csv")
 
     def associate(self, ts_pose):
         pose_indices = []
@@ -206,8 +195,7 @@ class EuRoCParser:
             trans = data[pose_indices[i], 1:4]
             quat = data[pose_indices[i], 4:8]
             quat = quat[[1, 2, 3, 0]]
-            
-            
+
             T_w_i = trimesh.transformations.quaternion_matrix(np.roll(quat, 1))
             T_w_i[:3, 3] = trans
             T_w_c = np.dot(T_w_i, T_i_c0)
@@ -252,9 +240,7 @@ class MonocularDataset(BaseDataset):
         self.height = calibration["height"]
         self.fovx = focal2fov(self.fx, self.width)
         self.fovy = focal2fov(self.fy, self.height)
-        self.K = np.array(
-            [[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]]
-        )
+        self.K = np.array([[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]])
         # distortion parameters
         self.disorted = calibration["distorted"]
         self.dist_coeffs = np.array(
@@ -294,16 +280,16 @@ class MonocularDataset(BaseDataset):
         y = y.reshape(-1, 1)
         seg = seg_map[:, y, x].squeeze(-1).long()
         mask = seg != -1
-        if feature_level == 0: # default
+        if feature_level == 0:  # default
             point_feature1 = feature_map[seg[0:1]].squeeze(0)
             mask = mask[0:1].reshape(1, feat_height, feat_width)
-        elif feature_level == 1: # s
+        elif feature_level == 1:  # s
             point_feature1 = feature_map[seg[1:2]].squeeze(0)
             mask = mask[1:2].reshape(1, self.height, self.width)
-        elif feature_level == 2: # m
+        elif feature_level == 2:  # m
             point_feature1 = feature_map[seg[2:3]].squeeze(0)
             mask = mask[2:3].reshape(1, self.height, self.width)
-        elif feature_level == 3: # l
+        elif feature_level == 3:  # l
             point_feature1 = feature_map[seg[3:4]].squeeze(0)
             mask = mask[3:4].reshape(1, self.height, self.width)
         else:
@@ -312,14 +298,15 @@ class MonocularDataset(BaseDataset):
         point_feature = point_feature1.reshape(feat_height, feat_width, -1).permute(2, 0, 1)
 
         return point_feature.cuda(), mask.cuda()
-    
+
     def __getitem__(self, idx):
         color_path = self.color_paths[idx]
         pose = self.poses[idx]
 
         image = np.array(Image.open(color_path))
         depth = None
-        gt_language_feature = None; language_feature_mask = None
+        gt_language_feature = None
+        language_feature_mask = None
 
         if self.disorted:
             image = cv2.remap(image, self.map1x, self.map1y, cv2.INTER_LINEAR)
@@ -327,24 +314,20 @@ class MonocularDataset(BaseDataset):
         if self.has_depth:
             depth_path = self.depth_paths[idx]
             depth = np.array(Image.open(depth_path)) / self.depth_scale
-        
-        if self.load_labels:
-            ##To run high res labels uncomment the following lines
-            #seg_map = torch.from_numpy(np.load(self.seg_map_path[idx]))
-            #feature_map = torch.from_numpy(np.load(self.feat_map_path[idx]))
-            #gt_language_feature, language_feature_mask = self.get_langsplat_feature(seg_map, 3, feature_map)
 
-            #To run low res labels uncomment the following lines
+        if self.load_labels:
+            # To run high res labels uncomment the following lines
+            # seg_map = torch.from_numpy(np.load(self.seg_map_path[idx]))
+            # feature_map = torch.from_numpy(np.load(self.feat_map_path[idx]))
+            # gt_language_feature, language_feature_mask = self.get_langsplat_feature(seg_map, 3, feature_map)
+
+            # To run low res labels uncomment the following lines
             feature_map = torch.from_numpy(np.load(self.feat_map_path[idx]))
-            ##resize these to image size
             gt_language_feature = feature_map
             language_feature_mask = feature_map
 
         image = (
-            torch.from_numpy(image / 255.0)
-            .clamp(0.0, 1.0)
-            .permute(2, 0, 1)
-            .to(device=self.device, dtype=self.dtype)
+            torch.from_numpy(image / 255.0).clamp(0.0, 1.0).permute(2, 0, 1).to(device=self.device, dtype=self.dtype)
         )
         pose = torch.from_numpy(pose).to(device=self.device)
         return image, depth, pose, gt_language_feature, language_feature_mask
@@ -390,9 +373,7 @@ class StereoDataset(BaseDataset):
             ]
         )
 
-        self.K = np.array(
-            [[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]]
-        )
+        self.K = np.array([[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]])
 
         self.Rmat = np.array(calibration["cam0"]["R"]["data"]).reshape(3, 3)
         self.K_raw_r = np.array(
@@ -403,16 +384,12 @@ class StereoDataset(BaseDataset):
             ]
         )
 
-        self.K_r = np.array(
-            [[self.fx_r, 0.0, self.cx_r], [0.0, self.fy_r, self.cy_r], [0.0, 0.0, 1.0]]
-        )
+        self.K_r = np.array([[self.fx_r, 0.0, self.cx_r], [0.0, self.fy_r, self.cy_r], [0.0, 0.0, 1.0]])
         self.Rmat_r = np.array(calibration["cam1"]["R"]["data"]).reshape(3, 3)
 
         # distortion parameters
         self.disorted = calibration["distorted"]
-        self.dist_coeffs = np.array(
-            [cam0raw["k1"], cam0raw["k2"], cam0raw["p1"], cam0raw["p2"], cam0raw["k3"]]
-        )
+        self.dist_coeffs = np.array([cam0raw["k1"], cam0raw["k2"], cam0raw["p1"], cam0raw["p2"], cam0raw["k3"]])
         self.map1x, self.map1y = cv2.initUndistortRectifyMap(
             self.K_raw,
             self.dist_coeffs,
@@ -422,9 +399,7 @@ class StereoDataset(BaseDataset):
             cv2.CV_32FC1,
         )
 
-        self.dist_coeffs_r = np.array(
-            [cam1raw["k1"], cam1raw["k2"], cam1raw["p1"], cam1raw["p2"], cam1raw["k3"]]
-        )
+        self.dist_coeffs_r = np.array([cam1raw["k1"], cam1raw["k2"], cam1raw["p1"], cam1raw["p2"], cam1raw["k3"]])
         self.map1x_r, self.map1y_r = cv2.initUndistortRectifyMap(
             self.K_raw_r,
             self.dist_coeffs_r,
@@ -449,16 +424,11 @@ class StereoDataset(BaseDataset):
         stereo.setUniquenessRatio(40)
         disparity = stereo.compute(image, image_r) / 16.0
         disparity[disparity == 0] = 1e10
-        depth = 47.90639384423901 / (
-            disparity
-        )  ## Following ORB-SLAM2 config, baseline*fx
+        depth = 47.90639384423901 / (disparity)  ## Following ORB-SLAM2 config, baseline*fx
         depth[depth < 0] = 0
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
         image = (
-            torch.from_numpy(image / 255.0)
-            .clamp(0.0, 1.0)
-            .permute(2, 0, 1)
-            .to(device=self.device, dtype=self.dtype)
+            torch.from_numpy(image / 255.0).clamp(0.0, 1.0).permute(2, 0, 1).to(device=self.device, dtype=self.dtype)
         )
         pose = torch.from_numpy(pose).to(device=self.device)
 
@@ -495,6 +465,7 @@ class ReplicaDataset(MonocularDataset):
         self.depth_paths = parser.depth_paths
         self.poses = parser.poses
 
+
 class ReplicaDatasetv2(MonocularDataset):
     def __init__(self, args, path, config):
         super().__init__(args, path, config)
@@ -514,6 +485,7 @@ class ReplicaDatasetv2(MonocularDataset):
         self.semantic_path = None
         self.poses = parser.poses
 
+
 class EurocDataset(StereoDataset):
     def __init__(self, args, path, config):
         super().__init__(args, path, config)
@@ -530,13 +502,13 @@ class RealsenseDataset(BaseDataset):
         super().__init__(args, path, config)
         self.pipeline = rs.pipeline()
         self.h, self.w = 720, 1280
-        
+
         self.depth_scale = 0
         if self.config["Dataset"]["sensor_type"] == "depth":
-            self.has_depth = True 
-        else: 
+            self.has_depth = True
+        else:
             self.has_depth = False
-        
+
         if self.config["language"]["labels_from_file"] == True:
             self.load_labels = True
         else:
@@ -558,11 +530,9 @@ class RealsenseDataset(BaseDataset):
         # rgb_sensor.set_option(rs.option.enable_auto_white_balance, True)
         self.rgb_sensor.set_option(rs.option.enable_auto_white_balance, False)
         self.rgb_sensor.set_option(rs.option.exposure, 200)
-        self.rgb_profile = rs.video_stream_profile(
-            self.profile.get_stream(rs.stream.color)
-        )
+        self.rgb_profile = rs.video_stream_profile(self.profile.get_stream(rs.stream.color))
         self.rgb_intrinsics = self.rgb_profile.get_intrinsics()
-        
+
         self.fx = self.rgb_intrinsics.fx
         self.fy = self.rgb_intrinsics.fy
         self.cx = self.rgb_intrinsics.ppx
@@ -571,9 +541,7 @@ class RealsenseDataset(BaseDataset):
         self.height = self.rgb_intrinsics.height
         self.fovx = focal2fov(self.fx, self.width)
         self.fovy = focal2fov(self.fy, self.height)
-        self.K = np.array(
-            [[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]]
-        )
+        self.K = np.array([[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]])
 
         self.disorted = True
         self.dist_coeffs = np.asarray(self.rgb_intrinsics.coeffs)
@@ -583,14 +551,9 @@ class RealsenseDataset(BaseDataset):
 
         if self.has_depth:
             self.depth_sensor = self.profile.get_device().first_depth_sensor()
-            self.depth_scale  = self.depth_sensor.get_depth_scale()
-            self.depth_profile = rs.video_stream_profile(
-                self.profile.get_stream(rs.stream.depth)
-            )
+            self.depth_scale = self.depth_sensor.get_depth_scale()
+            self.depth_profile = rs.video_stream_profile(self.profile.get_stream(rs.stream.depth))
             self.depth_intrinsics = self.depth_profile.get_intrinsics()
-        
-        
-
 
     def __getitem__(self, idx):
         pose = torch.eye(4, device=self.device, dtype=self.dtype)
@@ -602,7 +565,7 @@ class RealsenseDataset(BaseDataset):
             aligned_frames = self.align.process(frameset)
             rgb_frame = aligned_frames.get_color_frame()
             aligned_depth_frame = aligned_frames.get_depth_frame()
-            depth = np.array(aligned_depth_frame.get_data())*self.depth_scale
+            depth = np.array(aligned_depth_frame.get_data()) * self.depth_scale
             depth[depth < 0] = 0
             np.nan_to_num(depth, nan=1000)
         else:
@@ -614,10 +577,7 @@ class RealsenseDataset(BaseDataset):
             image = cv2.remap(image, self.map1x, self.map1y, cv2.INTER_LINEAR)
 
         image = (
-            torch.from_numpy(image / 255.0)
-            .clamp(0.0, 1.0)
-            .permute(2, 0, 1)
-            .to(device=self.device, dtype=self.dtype)
+            torch.from_numpy(image / 255.0).clamp(0.0, 1.0).permute(2, 0, 1).to(device=self.device, dtype=self.dtype)
         )
 
         return image, depth, pose

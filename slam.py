@@ -29,15 +29,16 @@ from utils.slam_backend import BackEnd
 from utils.slam_frontend import FrontEnd
 from language.load_lang_model import load_lang_model
 
+
 class SLAM:
     """
     Main RGB-D SLAM system class that integrates frontend, backend, and visualization.
-    
+
     The system follows a standard frontend-backend architecture where:
     - Frontend handles RGB-D frame processing, tracking, and keyframe selection
     - Backend performs mapping and optimization of the 3D Gaussian model
     - Optional GUI provides visualization and parameter adjustment (Note: GUI shows language learning when loaded with language lables from file)
-    
+
     Attributes:
         config: Configuration dictionary loaded from YAML
         save_dir: Directory for saving results and logs
@@ -46,10 +47,11 @@ class SLAM:
         frontend: SLAM frontend handling tracking and keyframe selection
         backend: SLAM backend handling language learning and mapping and optimization
     """
+
     def __init__(self, config, save_dir=None):
         """
         Initialize the SLAM system with the given configuration.
-        
+
         Args:
             config: Configuration dictionary loaded from YAML
             save_dir: Directory for saving results and logs (optional)
@@ -62,7 +64,7 @@ class SLAM:
         # Store configuration
         self.config = config
         self.save_dir = save_dir
-        
+
         # Munchify configuration parameters for convenient dot access
         model_params = munchify(config["model_params"])
         opt_params = munchify(config["opt_params"])
@@ -81,11 +83,9 @@ class SLAM:
         # Initialize Gaussian model
         self.gaussians = GaussianModel(model_params.sh_degree, config=self.config)
         self.gaussians.init_lr(6.0)
-        
+
         # Load dataset
-        self.dataset = load_dataset(
-            model_params, model_params.source_path, config=config
-        )
+        self.dataset = load_dataset(model_params, model_params.source_path, config=config)
 
         # Load language model if needed
         if config["language"]["language_train"] and not config["language"]["labels_from_file"]:
@@ -100,16 +100,10 @@ class SLAM:
         # Set background color
         bg_color = [0, 0, 0]
         self.background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
-        
-        #self.background_language = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
-        #if config["language"]["language_train"]:
-        #    self.background_language = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
-        #else:
-        #    self.background_language = None
 
         # Initialize communication queues
         frontend_queue = mp.Queue()  # Messages from backend to frontend
-        backend_queue = mp.Queue()   # Messages from frontend to backend
+        backend_queue = mp.Queue()  # Messages from frontend to backend
 
         # GUI communication queues (or fake queues if GUI is disabled)
         q_main2vis = mp.Queue() if self.use_gui else FakeQueue()
@@ -178,7 +172,7 @@ class SLAM:
         backend_queue.put(["stop"])
         backend_process.join()
         Log("Backend stopped and joined the main thread")
-        
+
         if self.use_gui and gui_process:
             q_main2vis.put(gui_utils.GaussianPacket(finish=True))
             gui_process.join()
@@ -187,7 +181,7 @@ class SLAM:
     def _perform_evaluation(self, frontend_queue: mp.Queue, backend_queue: mp.Queue) -> None:
         """
         Perform evaluation of the online language system
-        
+
         Args:
             frontend_queue: Queue for communication from backend to frontend
             backend_queue: Queue for communication from frontend to backend
@@ -195,7 +189,7 @@ class SLAM:
         # Get final state from frontend
         self.gaussians = self.frontend.gaussians
         kf_indices = self.frontend.kf_indices
-        
+
         # Evaluate trajectory error
         ATE = eval_ate(
             self.frontend.cameras,
@@ -219,20 +213,20 @@ class SLAM:
             iteration="before_opt",
             save_images=True,
         )
-        
+
         # Perform color refinement in backend
         Log("Performing final color refinement...")
         while not frontend_queue.empty():
             frontend_queue.get()  # Clear queue
-            
+
         backend_queue.put(["color_refinement"])
-        
+
         # Wait for backend to complete and return refined gaussians
         while True:
             if frontend_queue.empty():
                 time.sleep(0.01)
                 continue
-                
+
             data = frontend_queue.get()
             if data[0] == "sync_backend" and frontend_queue.empty():
                 self.gaussians = data[1]
@@ -250,10 +244,11 @@ class SLAM:
             kf_indices=kf_indices,
             iteration="after_opt",
         )
-        
+
         # Save final model
         save_gaussians(self.gaussians, self.save_dir, "final_after_opt", final=True)
-    
+
+
 if __name__ == "__main__":
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")
@@ -261,7 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval", action="store_true")
 
     args = parser.parse_args(sys.argv[1:])
-    
+
     # Initialize multiprocessing with spawn method for CUDA compatibility
     mp.set_start_method("spawn", force=True)
 
@@ -285,9 +280,7 @@ if __name__ == "__main__":
         mkdir_p(config["Results"]["save_dir"])
         current_datetime = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         path = config["Dataset"]["dataset_path"].split("/")
-        save_dir = os.path.join(
-            config["Results"]["save_dir"], path[-3], current_datetime
-        )
+        save_dir = os.path.join(config["Results"]["save_dir"], path[-3], current_datetime)
         tmp = args.config
         tmp = tmp.split(".")[0]
         config["Results"]["save_dir"] = save_dir
@@ -297,7 +290,7 @@ if __name__ == "__main__":
         Log("saving results in " + save_dir)
 
     slam = SLAM(config, save_dir=save_dir)
-    #slam.run()
+    # slam.run()
 
     # All done
     Log("Done.")

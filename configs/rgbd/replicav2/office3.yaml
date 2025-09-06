@@ -3,12 +3,12 @@ Dataset:
   dataset_path: "datasets/langslam/vmap/office_3/imap/00"
   single_thread: True
 Training:
-  kf_interval: 4 #1
-  mapping_itr_num: 150 #15
-  gaussian_update_every: 150 #100
+  kf_interval: 4
+  mapping_itr_num: 150
+  gaussian_update_every: 150
   gaussian_update_offset: 50
   gaussian_reset: 2001
-  size_threshold: 20 #5
+  size_threshold: 20
   use_gt_pose: False #in future this should be faster we can use reproj. error or pnp to make this faster and accurate
 language:
   labels_from_file: False # if True, will load labels from a file (can be low res or high res langsplat labels) instead of running online language model
