@@ -1,9 +1,13 @@
+<div align="center">
+
 # Online Language Splatting
 
 [Saimouli Katragadda](https://saimouli.github.io/), [Cho-Ying Wu](https://choyingw.github.io), [Yuliang Guo†](https://yuliangguo.github.io/), [Xinyu Huang](https://scholar.google.com/citations?user=cL4bNBwAAAAJ&hl=en), [Guoquan Huang](https://udel.edu/~ghuang/), [Liu Ren](https://sites.google.com/site/liurenshomepage/)  
-(† indicates corresponding author)  
-[**Webpage**](https://saimouli.github.io/onlineLang/) | [**Paper**](https://arxiv.org/pdf/2503.09447) | [**Video**](https://www.youtube.com/watch?v=GIldru2006k&feature=youtu.be)  
-**Pretrained Models**: [HuggingFace](https://huggingface.co/datasets/slamDev/OnlineLanguageSplatting/tree/main) -> contains pre-trained weights for models
+(† indicates project lead)  
+[**Webpage**](https://saimouli.github.io/onlineLang/) | [**Paper**](https://arxiv.org/pdf/2503.09447) | [**Video**](https://www.youtube.com/watch?v=GIldru2006k&feature=youtu.be) | [**Pretrained Models**](https://huggingface.co/datasets/slamDev/OnlineLanguageSplatting/tree/main)
+
+[**ICCV 2025**](https://iccv.thecvf.com/)
+
 
 <table>
   <tr>
@@ -18,13 +22,16 @@
   </tr>
 </table>
 
+**Online Language Splatting** introduces a **fully online system** that seamlessly integrates dense CLIP features with Gaussian Splatting, providing a potential form of **physical memory** to support real-time human–machine interaction and **world modeling**.
+
+</div>
+
 ---
 
 ## 🔔 Highlights
 
 - Our method realize Gaussian Splatting and open-vocabulary-preserving language mapping simultenuously in an online SLAM framework.
 - This release include both the integrated framework, and the plug-in-and-play pretrained network modules producing dense and sharp CLIP maps (192x192x768) beyond real-time speed, e.g., >40 FPS.
-- We’re actively working on improving the pipeline for higher speed, larger-scale datasets, and broader compatibility — stay tuned for upcoming updates!
 
 ---
 
@@ -260,7 +267,7 @@ If you find this work helpful, please consider citing us:
 @inproceedings{katragadda2025_onlinelang,
   title     = {{O}nline {L}anguage {S}platting},
   author    = {Saimouli Katragadda and Cho-Ying Wu and Yuliang Guo and Xinyu Huang and Guoquan Huang and Liu Ren},
-  booktitle = {arXiv},
+  booktitle = {ICCV},
   year      = {2025}
 }
 ```
