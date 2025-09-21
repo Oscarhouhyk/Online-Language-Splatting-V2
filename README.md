@@ -9,7 +9,7 @@
 [**ICCV 2025**](https://iccv.thecvf.com/)
 
 <p align="center">
-  <img src="media/langslam_teasor.gif" alt="teaser" style="width: 50%;">
+  <img src="media/langslam_teasor.gif" alt="teaser" style="width: 65%;">
 </p>
 
 
