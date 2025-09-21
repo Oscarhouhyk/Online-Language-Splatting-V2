@@ -2,12 +2,25 @@
 
 # Online Language Splatting
 
-[Saimouli Katragadda](https://saimouli.github.io/), [Cho-Ying Wu](https://choyingw.github.io), [Yuliang Guo†](https://yuliangguo.github.io/), [Xinyu Huang](https://scholar.google.com/citations?user=cL4bNBwAAAAJ&hl=en), [Guoquan Huang](https://udel.edu/~ghuang/), [Liu Ren](https://sites.google.com/site/liurenshomepage/)  
-(† indicates project lead)  
-[**Webpage**](https://saimouli.github.io/onlineLang/) | [**Paper**](https://arxiv.org/pdf/2503.09447) | [**Video**](https://www.youtube.com/watch?v=GIldru2006k&feature=youtu.be) | [**Pretrained Models**](https://huggingface.co/datasets/slamDev/OnlineLanguageSplatting/tree/main)
+[Saimouli Katragadda<sup>1</sup>](https://saimouli.github.io/), [Cho-Ying Wu<sup>2</sup>](https://choyingw.github.io), [Yuliang Guo<sup>2&dagger;</sup>](https://yuliangguo.github.io/), [Xinyu Huang<sup>2</sup>](https://scholar.google.com/citations?user=cL4bNBwAAAAJ&hl=en), [Guoquan Huang<sup>1</sup>](https://udel.edu/~ghuang/), [Liu Ren<sup>2</sup>](https://sites.google.com/site/liurenshomepage/)  
+<sup>1</sup>University of Delaware &emsp;&emsp;&emsp;&emsp;<sup>2</sup>Bosch Research North America &emsp;&emsp;&emsp;&emsp;<sup>&dagger;</sup> Project Lead  
+[**Webpage**](https://saimouli.github.io/onlineLang/) | [**Paper**](https://arxiv.org/pdf/2503.09447) | [**Video**](https://www.youtube.com/watch?v=UGdtMb1Y44E) | [**Pretrained Models**](https://huggingface.co/datasets/slamDev/OnlineLanguageSplatting/tree/main)
 
 [**ICCV 2025**](https://iccv.thecvf.com/)
 
+<p align="center">
+  <img src="media/langslam_teasor.gif" alt="teaser" style="width: 50%;">
+</p>
+
+
+</div>
+
+
+**Online Language Splatting** 
+- Introduces a **fully online system** that seamlessly integrates dense CLIP features with Gaussian Splatting.
+- Provides a potential form of **physical memory** for real-time **human–machine interaction** and **world modeling**.
+
+<div align="center">
 
 <table>
   <tr>
@@ -21,16 +34,13 @@
     </td>
   </tr>
 </table>
-
-**Online Language Splatting** introduces a **fully online system** that seamlessly integrates dense CLIP features with Gaussian Splatting, providing a potential form of **physical memory** to support real-time human–machine interaction and **world modeling**.
-
 </div>
 
 ---
 
 ## 🔔 Highlights
 
-- Our method realize Gaussian Splatting and open-vocabulary-preserving language mapping simultenuously in an online SLAM framework.
+- Our method realizes Gaussian Splatting and open-vocabulary-preserving language mapping simultenuously in an online SLAM framework.
 - This release include both the integrated framework, and the plug-in-and-play pretrained network modules producing dense and sharp CLIP maps (192x192x768) beyond real-time speed, e.g., >40 FPS.
 
 ---
