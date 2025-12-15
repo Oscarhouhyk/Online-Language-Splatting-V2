@@ -891,7 +891,7 @@ class BackEnd(mp.Process):
                     # Perform color refinement and save models
                     if not self.is_single_stage:
                         # Save online autoencoder weights
-                        os.makedirs(self.config["language"]["online_ckpt_path"], exist_ok=True)
+                        os.makedirs(os.path.dirname(self.config["language"]["online_ckpt_path"]), exist_ok=True)
                         torch.save(
                             self.online_auto.state_dict(), 
                             self.config["language"]["online_ckpt_path"]
