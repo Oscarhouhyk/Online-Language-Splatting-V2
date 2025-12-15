@@ -7,6 +7,8 @@ based on Gaussian Splatting. It supports RGB-D sensors and language-guided scene
 """
 
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+
 import sys
 import time
 from argparse import ArgumentParser

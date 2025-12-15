@@ -1,6 +1,6 @@
 Results:
   save_results: True
-  save_dir: "/media/saimouli/Data6T/Replica/omni_data_result"
+  save_dir: "/data/houyj/robotics/online_lang_splatting/results/replicav2/omni_data_result"
   save_trj: False
   save_trj_kf_intv: 20
   use_gui: False
@@ -62,10 +62,10 @@ Training:
 language:
   labels_from_file: False
   language_train: False
-  auto_ckpt_path: "/home/saimouli/Downloads/training_weights_general/epoch=149-step=16500.ckpt" #/media/sai/External HDD/sai/datasets/langslam/Replica/weights/version_5_code32/epoch=127-step=17536.ckpt"
-  lang_model_path: "/home/saimouli/Desktop/Bosch/GaussianGripMapping/seg_clip_model_l_new.pth"
+  auto_ckpt_path: "/data/houyj/robotics/online_lang_splatting/pretrained_models/omni_general/ae_149_he.ckpt" #/media/sai/External HDD/sai/datasets/langslam/Replica/weights/version_5_code32/epoch=127-step=17536.ckpt"
+  lang_model_path: "/data/houyj/robotics/online_lang_splatting/seg_clip_model_l.pth"
   lang_label_path: ""
-  hr_ckpt_path: "/home/saimouli/Downloads/training_weights_general/high_res_71_indoor.ckpt"
+  hr_ckpt_path: "/data/houyj/robotics/online_lang_splatting/pretrained_models/omni_general/high_res_71_indoor.ckpt"
 
 opt_params:
   iterations: 30000

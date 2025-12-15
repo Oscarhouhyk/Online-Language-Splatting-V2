@@ -1,6 +1,6 @@
 inherit_from: "configs/rgbd/replicav2/base_config.yaml"
 Dataset:
-  dataset_path: "/media/saimouli/RPNG_FLASH_4/datasets/Replica2/vmap/room_0_small/imap/00"
+  dataset_path: "/data/houyj/robotics/data/vmap/room_0/imap/00"
   single_thread: False
 Results:
   use_gui: False
@@ -16,7 +16,7 @@ language:
   labels_from_file: False # if True, will load labels from a file (can be low res or high res langsplat labels) instead of running online language model
   language_train: True # if True, will train for the language
   single_stage_ae: False # if True, will use cross-data ae (pretrained on cross-data of replica), if false will use a 2-stage ae
-  auto_ckpt_path: "/home/autoencoder_coco_cross/mlp_run1/checkpoints/epoch=133-step=2948.ckpt" #uncomment this to use the pretrained model
+  #auto_ckpt_path: "/home/autoencoder_coco_cross/mlp_run1/checkpoints/epoch=133-step=2948.ckpt" #uncomment this to use the pretrained model
   hr_model: True
   lang_code_size: 15
-  online_ckpt_path: "/media/saimouli/Data6T/Replica/omni_data_result/online_15_room0.pth"
+  online_ckpt_path: "/data/houyj/robotics/online_lang_splatting/output/omni_data_result/online_15_room0.pth"

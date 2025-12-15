@@ -16,6 +16,7 @@ Main responsibilities:
 
 import random
 import time
+import os
 
 import torch
 import torch.multiprocessing as mp
@@ -243,9 +244,9 @@ class BackEnd(mp.Process):
         heatmap_recon_coco = cv2.applyColorMap(sim_norm_recon_coco, cv2.COLORMAP_TURBO)
 
         # Display visualization windows
-        cv2.imshow("Sim Online", heatmap_recon)
+        """ cv2.imshow("Sim Online", heatmap_recon)
         cv2.imshow("General Sim", heatmap_recon_coco)
-        cv2.waitKey(10)
+        cv2.waitKey(10) """
 
     def reset(self):
         """Reset the backend state for a new mapping session."""
@@ -890,6 +891,7 @@ class BackEnd(mp.Process):
                     # Perform color refinement and save models
                     if not self.is_single_stage:
                         # Save online autoencoder weights
+                        os.makedirs(self.config["language"]["online_ckpt_path"], exist_ok=True)
                         torch.save(
                             self.online_auto.state_dict(), 
                             self.config["language"]["online_ckpt_path"]
