@@ -45,6 +45,39 @@ class ReplicaParser:
             frames.append(frame)
         self.frames = frames
 
+class GoatcoreParser:
+    def __init__(self, input_folder):
+        self.input_folder = input_folder
+        self.color_paths = natsorted(glob.glob(f"{self.input_folder}/images/img*.png"))
+        self.depth_paths = natsorted(glob.glob(f"{self.input_folder}/depth/img*.npy"))
+        self.n_img = len(self.color_paths)
+        self.load_poses(f"{self.input_folder}/local_pos.txt")
+    def load_poses(self, path):
+        self.poses = []
+        with open(path, "r") as f:
+            lines = f.readlines()
+
+        frames = []
+        for i in range(self.n_img):
+            line = lines[i]
+            line_vals = np.array(list(map(float, line.split())))
+            quat = line_vals[1:5]
+            trans = line_vals[5:8]
+            T = trimesh.transformations.quaternion_matrix(np.roll(quat, 1))
+            T[:3, 3] = trans
+            pose = np.linalg.inv(T)
+            #print(pose)
+            self.poses.append(pose)
+            frame = {
+                "file_path": self.color_paths[i],
+                "depth_path": self.depth_paths[i],
+                "transform_matrix": pose.tolist(),
+            }
+
+            frames.append(frame)
+        self.frames = frames
+    
+
 
 class ReplicaParserv2:
     def __init__(self, input_folder):
@@ -140,7 +173,7 @@ class TUMParser:
             T = trimesh.transformations.quaternion_matrix(np.roll(quat, 1))
             T[:3, 3] = trans
             self.poses += [np.linalg.inv(T)]
-
+            
             frame = {
                 "file_path": str(os.path.join(datapath, image_data[i, 1])),
                 "depth_path": str(os.path.join(datapath, depth_data[j, 1])),
@@ -148,6 +181,7 @@ class TUMParser:
             }
 
             self.frames.append(frame)
+
 
 
 class EuRoCParser:
@@ -303,17 +337,30 @@ class MonocularDataset(BaseDataset):
         color_path = self.color_paths[idx]
         pose = self.poses[idx]
 
-        image = np.array(Image.open(color_path))
+        # 支持 .npy 和 常规图像格式（.png/.jpg...）的读取
+        ext = os.path.splitext(color_path)[1].lower()
+        if ext == ".npy":
+            image = np.load(color_path)
+        else:
+            image = np.array(Image.open(color_path))
         depth = None
         gt_language_feature = None
         language_feature_mask = None
 
         if self.disorted:
             image = cv2.remap(image, self.map1x, self.map1y, cv2.INTER_LINEAR)
-
+        image = image[:,:,:3] if image.shape[2] == 4 else image
+        #print(image.shape)
         if self.has_depth:
             depth_path = self.depth_paths[idx]
-            depth = np.array(Image.open(depth_path)) / self.depth_scale
+            # 根据文件后缀选择读取方式，.npy 使用 np.load，其他（如 .png）使用 PIL
+            ext = os.path.splitext(depth_path)[1].lower()
+            if ext == ".npy":
+                depth = np.load(depth_path)
+            else:
+                depth = np.array(Image.open(depth_path))
+            if self.depth_scale is not None:
+                depth = depth / self.depth_scale
 
         if self.load_labels:
             # To run high res labels uncomment the following lines
@@ -495,6 +542,7 @@ class EurocDataset(StereoDataset):
         self.color_paths = parser.color_paths
         self.color_paths_r = parser.color_paths_r
         self.poses = parser.poses
+        
 
 
 class RealsenseDataset(BaseDataset):
@@ -582,6 +630,18 @@ class RealsenseDataset(BaseDataset):
 
         return image, depth, pose
 
+class GoatcoreDataset(MonocularDataset):
+    def __init__(self, args, path, config):
+        super().__init__(args, path, config)
+        dataset_path = config["Dataset"]["dataset_path"]
+        parser = GoatcoreParser(dataset_path)
+        self.num_imgs = parser.n_img
+        print("Number of images:", self.num_imgs)
+        self.color_paths = parser.color_paths
+        self.depth_paths = parser.depth_paths
+        self.poses = parser.poses
+        self.load_labels = False
+        print(len(self.poses))
 
 def load_dataset(args, path, config):
     if config["Dataset"]["type"] == "tum":
@@ -594,5 +654,7 @@ def load_dataset(args, path, config):
         return EurocDataset(args, path, config)
     elif config["Dataset"]["type"] == "realsense":
         return RealsenseDataset(args, path, config)
+    elif config["Dataset"]["type"] == "goatcore":
+        return GoatcoreDataset(args, path, config)
     else:
         raise ValueError("Unknown dataset type")

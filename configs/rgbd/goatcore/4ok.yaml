@@ -1,15 +1,17 @@
-inherit_from: "configs/rgbd/replicav2/base_config.yaml"
+inherit_from: "configs/rgbd/goatcore/base_config.yaml"
 Dataset:
-  dataset_path: "/data/houyj/robotics/data/vmap/office_3/imap/00"
-  single_thread: True
+  dataset_path: "/data/houyj/robotics/data/Goat-core/dataset/5cd"
+  single_thread: False
+Results:
+  use_gui: False
 Training:
-  kf_interval: 4
-  mapping_itr_num: 150
-  gaussian_update_every: 150
+  kf_interval: 1
+  mapping_itr_num: 1
+  gaussian_update_every: 1
   gaussian_update_offset: 50
-  gaussian_reset: 2001
+  gaussian_reset: 601
   size_threshold: 20
-  use_gt_pose: False #in future this should be faster we can use reproj. error or pnp to make this faster and accurate
+  use_gt_pose: True
 language:
   labels_from_file: False # if True, will load labels from a file (can be low res or high res langsplat labels) instead of running online language model
   language_train: True # if True, will train for the language
@@ -17,4 +19,4 @@ language:
   auto_ckpt_path: "/data/houyj/robotics/online_lang_splatting/pretrained_models/omni_general/ae_149_he.ckpt" #uncomment this to use the pretrained model
   hr_model: True
   lang_code_size: 15
-  online_ckpt_path: "/data/houyj/robotics/online_lang_splatting/output/omni_data_result/online_15_office3.pth"
+  online_ckpt_path: "/data/houyj/robotics/online_lang_splatting/output/omni_data_result/online_15_5cd.pth"

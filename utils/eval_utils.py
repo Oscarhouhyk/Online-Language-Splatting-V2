@@ -23,11 +23,24 @@ from utils.logging_utils import Log
 
 def evaluate_evo(poses_gt, poses_est, plot_dir, label, monocular=False):
     ## Plot
+    if len(poses_gt) < 3:
+        Log(f"Skipping evaluation: Too few poses ({len(poses_gt)}). Need at least 3.", tag="Eval")
+        return 0.0
+
     traj_ref = PosePath3D(poses_se3=poses_gt)
     traj_est = PosePath3D(poses_se3=poses_est)
-    traj_est_aligned = trajectory.align_trajectory(
+
+    try:
+        traj_est_aligned = trajectory.align_trajectory(
+            traj_est, traj_ref, correct_scale=monocular
+        )
+    except Exception as e:
+        Log(f"Trajectory alignment failed: {str(e)}", tag="Eval")
+        return 0.0
+
+    """ traj_est_aligned = trajectory.align_trajectory(
         traj_est, traj_ref, correct_scale=monocular
-    )
+    ) """
 
     ## RMSE
     pose_relation = metrics.PoseRelation.translation_part
@@ -122,7 +135,7 @@ def eval_rendering(
     iteration="final",
     save_images=False,
 ):
-    interval = 5
+    interval = 1
     img_pred, img_gt, saved_frame_idx = [], [], []
     end_idx = len(frames) - 1 if iteration == "final" or "before_opt" else iteration
     psnr_array, ssim_array, lpips_array = [], [], []

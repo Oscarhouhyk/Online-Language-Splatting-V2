@@ -152,6 +152,7 @@ class SED(nn.Module):
                     each class for each pixel.
         """
         images = [x["image"].to(self.device) for x in batched_inputs]
+        images = [x[:3] if x.shape[0] == 4 else x for x in images]
 
         self.size_divisibility = -1
 

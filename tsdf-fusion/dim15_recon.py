@@ -9,12 +9,14 @@ from skimage import measure
 import fusion3
 
 
-prefix = '/media/saimouli/RPNG_FLASH_4/datasets/Replica2/vmap/room_0_small/imap/00'
+prefix = '/data/houyj/robotics/data/vmap/room_0/imap/00'
 #color_prefix = '/home/choyingw/Documents/GaussianGripMapping/datasets/Replica/room0_test/HR/colorized_1'
 #color_prefix = '/home/choyingw/Documents/1029_15dim/GaussianGripMapping/results/datasets_Replica/2024-10-30-17-54-47/psnr/before_opt/lang'
 
 # Download the langslam results from Dropbox and put it here
-color_prefix = '/media/saimouli/Data6T/Replica/omni_data_result/room_0_small/2025-03-24-06-23-28/psnr/before_opt/lang'
+color_prefix = '/data/houyj/robotics/online_lang_splatting/results/2-stage/room_0/2026-01-08-12-07-59/psnr/before_opt/lang'
+# /data/houyj/robotics/online_lang_splatting/results/rgbd-disentangle-with-label/2025-12-17-13-30-30/psnr/before_opt/lang
+# /data/houyj/robotics/online_lang_splatting/results/replicav2/omni_data_result/room_0/2025-12-15-22-09-35/psnr/before_opt/lang
 
 if __name__ == "__main__":
   # ======================================================================================================== #
@@ -23,7 +25,7 @@ if __name__ == "__main__":
   # frustums in the dataset
   # ======================================================================================================== #
   print("Estimating voxel volume bounds...")
-  n_imgs = 200
+  n_imgs = 2000
   cam_extr = np.loadtxt(f"{prefix}/traj_w_c.txt", delimiter=' ').reshape(-1, 4, 4)
   print(cam_extr.shape)
   cam_intr = np.array([
@@ -32,6 +34,10 @@ if __name__ == "__main__":
     [0, 0, 1],
   ])
   vol_bnds = np.zeros((3,2))
+
+  vol_bnds[:,0] = np.inf
+  vol_bnds[:,1] = -np.inf
+
   for i in range(n_imgs):
     # langslam results save without those following frames
     if i == 0 or i % 5 != 0:
@@ -46,6 +52,8 @@ if __name__ == "__main__":
     view_frust_pts = fusion3.get_view_frustum(depth_im, cam_intr, cam_pose)
     vol_bnds[:,0] = np.minimum(vol_bnds[:,0], np.amin(view_frust_pts, axis=1))
     vol_bnds[:,1] = np.maximum(vol_bnds[:,1], np.amax(view_frust_pts, axis=1))
+
+  print(f"Computed volume bounds:\n{vol_bnds}")
   # ======================================================================================================== #
 
   # ======================================================================================================== #
@@ -66,12 +74,32 @@ if __name__ == "__main__":
     # Read RGB-D image and camera pose
     try:
       color_image = np.load(f"{color_prefix}/{i}.npy")
+      print(f"Frame {i}: Color shape={color_image.shape}")
     except:
       print("keyframe, skipped!")
       continue
     depth_im = cv2.imread(f"{prefix}/depth/depth_{i}.png",-1).astype(float)
     depth_im /= 1000.
+    print(f"Frame {i}: Depth shape={depth_im.shape}")
     cam_pose = cam_extr[i]
+
+    # DEBUG: Check depth range
+    d_min, d_max = depth_im.min(), depth_im.max()
+    print(f"Frame {i}: Depth min={d_min:.3f}, max={d_max:.3f}")
+
+    # DEBUG: Project center pixel to check alignment with bounds
+    h, w = depth_im.shape
+    u, v = w // 2, h // 2
+    z = depth_im[v, u]
+    if z > 0:
+        x = (u - cam_intr[0, 2]) * z / cam_intr[0, 0]
+        y = (v - cam_intr[1, 2]) * z / cam_intr[1, 1]
+        pt_c = np.array([x, y, z, 1])
+        pt_w = cam_pose @ pt_c
+        in_bounds = np.all(pt_w[:3] >= vol_bnds[:,0]) and np.all(pt_w[:3] <= vol_bnds[:,1])
+        print(f"Frame {i}: Center pt (world) = {pt_w[:3]}, In bounds? {in_bounds}")
+    else:
+        print(f"Frame {i}: Center pixel invalid depth")
 
     # Integrate observation into voxel volume (assume color aligned with depth)
     #print("min: ", color_image.max())
@@ -81,17 +109,45 @@ if __name__ == "__main__":
   fps = n_imgs / (time.time() - t0_elapse)
   print("Average FPS: {:.2f}".format(fps))
   
+  """ if hasattr(tsdf_vol, '_tsdf_vol_cpu'):
+      t_min, t_max = tsdf_vol._tsdf_vol_cpu.min(), tsdf_vol._tsdf_vol_cpu.max()
+      print(f"TSDF Volume Range: [{t_min:.4f}, {t_max:.4f}]")
+      if t_min > 0 or t_max < 0:
+          print("Warning: TSDF volume does not contain the zero-crossing (surface). Mesh generation will fail.") """
+
+
   # Get mesh from voxel volume and save to disk (can be viewed with Meshlab)
   print("Saving mesh to mesh.ply...")
-  verts, faces, norms, colors = tsdf_vol.get_mesh()
+
+  try:
+      verts, faces, norms, colors = tsdf_vol.get_mesh()
+      # Original floatingp-point semantic_mesh
+      fusion3.meshwrite(f"{color_prefix}/../semantic_mesh.ply", verts, faces, norms, colors)
+
+      # Colorized mesh to visually see consistency
+      colors = (colors + 1) * 127.5
+      fusion3.meshwrite_color(f"{color_prefix}/../semantic_mesh_color.ply", verts, faces, norms, colors)
+  except ValueError as e:
+      print(f"Error generating mesh: {e}")
+      print("Skipping mesh generation.")
+  
+
+  """ verts, faces, norms, colors = tsdf_vol.get_mesh()
   # Original floatingp-point semantic_mesh
   fusion3.meshwrite(f"{color_prefix}/../semantic_mesh.ply", verts, faces, norms, colors)
 
   # Colorized mesh to visually see consistency
   colors = (colors + 1) * 127.5
-  fusion3.meshwrite_color(f"{color_prefix}/../semantic_mesh_color.ply", verts, faces, norms, colors)
+  fusion3.meshwrite_color(f"{color_prefix}/../semantic_mesh_color.ply", verts, faces, norms, colors) """
+
 
   # Get point cloud from voxel volume and save to disk (can be viewed with Meshlab)
-  print("Saving point cloud to pc.ply...")
+  """ print("Saving point cloud to pc.ply...")
   point_cloud = tsdf_vol.get_point_cloud()
-  fusion3.pcwrite(f"{color_prefix}/../semantic_pc.ply", point_cloud)
+  fusion3.pcwrite(f"{color_prefix}/../semantic_pc.ply", point_cloud) """
+
+  try:
+      point_cloud = tsdf_vol.get_point_cloud()
+      fusion3.pcwrite(f"{color_prefix}/../semantic_pc.ply", point_cloud)
+  except ValueError as e:
+      print(f"Error generating point cloud: {e}")

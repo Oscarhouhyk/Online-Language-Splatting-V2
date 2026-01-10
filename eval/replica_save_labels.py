@@ -70,7 +70,7 @@ def save_annotations_to_json(info, annotations, json_file):
 
 def load_labels(seg_file):
     with open(seg_file, 'r') as f:
-        seg_config = yaml.safe_load(f)
+        seg_config = yaml.load(f, Loader=yaml.Loader)
 
     # Extract the name for each id
     id_to_name = {item['id']: item['name'] for item in seg_config['classes']}

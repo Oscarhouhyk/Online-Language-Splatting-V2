@@ -1,6 +1,7 @@
 import yaml
 import sys
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 sys.path.append( os.path.dirname(os.path.dirname(os.path.realpath(__file__))) )
 from language.autoencoder.model import AutoencoderLight, EncoderDecoderOnline
 from language.supervisedNet import LangSupervisedNet
@@ -316,21 +317,23 @@ def pc15_parser(txt_file):
 
 ### Various Paths
 # Replica_v2 for config
-path = '/media/saimouli/RPNG_FLASH_4/datasets/Replica2/vmap/room_0/imap/00/render_config.yaml'
+path = '/data/houyj/robotics/data/vmap/room_0/imap/00/render_config.yaml'
 # Your langsplat/ langslam result path to load reconstructed TSDF
-load_path = '/media/saimouli/Data6T/Replica/omni_data_result/room_0_small/2025-03-24-06-23-28/psnr/before_opt'
+load_path = '/data/houyj/robotics/online_lang_splatting/results/2-stage/room_0/2026-01-08-12-07-59/psnr/before_opt'
 # where to save point cloud/ mesh results
 pc_save_path = f'{load_path}/3d_mesh'
 # auto-encoder path
-ae_ckpt_path = "/home/saimouli/Desktop/Bosch/training_weights_general/ae_149_he.ckpt"
-online_ckpt = torch.load(f'{load_path}/online_15_room0.pth')
+ae_ckpt_path = "/data/houyj/robotics/online_lang_splatting/pretrained_models/omni_general/ae_149_he.ckpt"
+# online encoder-decoder path
+online_ckpt_path = "/data/houyj/robotics/online_lang_splatting/output/omni_data_result/online_15_room0.pth"
+online_ckpt = torch.load(online_ckpt_path)
 # color matrix for groundtruth class
-color_mat = np.load('/media/saimouli/RPNG_FLASH_4/datasets/Replica2/vmap/room_0/imap/00/color_code.npy')
+color_mat = np.load('/data/houyj/robotics/data/vmap/room_0/imap/00/color_code.npy')
 # where is the reconstructed groundtruth point cloud
-gt_pcd = o3d.io.read_point_cloud("/media/saimouli/Data6T/Replica/omni_data_result/room_0_small/2025-03-24-06-23-28/psnr/before_opt/GT_semantic_pc.ply")
+gt_pcd = o3d.io.read_point_cloud("/data/houyj/robotics/online_lang_splatting/results/2-stage/room_0/2026-01-08-12-07-59/psnr/before_opt/GT_semantic_pc.ply")
 
 os.makedirs(pc_save_path, exist_ok=True)
-normals, faces = mesh_parser(f'{load_path}/semantic_mesh_color.ply')
+normals, faces = mesh_parser(f'{load_path}/semantic_mesh.ply')  ## semantic_mesh.ply
 
 with open(path, "rb") as file:
     config = yaml.unsafe_load(file)
@@ -378,7 +381,7 @@ online_auto = EncoderDecoderOnline().to("cuda").eval()
 online_auto.load_state_dict(online_ckpt)
 
 # load the reconstructed points with features
-points, sem_feat = pc15_parser(f"{load_path}/semantic_pc.ply")
+points, sem_feat = pc15_parser(f"{load_path}/semantic_pc.ply") ## semantic_pc.ply
 pcd = o3d.geometry.PointCloud()
 pcd.points = o3d.utility.Vector3dVector(points)
 num_points = sem_feat.shape[0]
@@ -393,21 +396,36 @@ gt_colors = np.array(gt_pcd.colors)
 gt_colors_int = (255 * gt_colors).astype(int)
 cds = []
 emds = []
+
+MAX_POINTS = 4096 
+
 for i in range(len(query)):
     pred_positive_idx = positive_list.index(query[i])
     gt_positive_idx = class_list.index(query[i])
     K1 = (fetch == pred_positive_idx)
     queried_points = points[K1]
-    queried_points = queried_points[::8]
+
+    #queried_points = queried_points[::8]
+
     K2 = (gt_colors_int[:,0] == color_mat[gt_positive_idx, 0]) & \
     (gt_colors_int[:,1] == color_mat[gt_positive_idx, 1]) & \
         (gt_colors_int[:,2]==color_mat[gt_positive_idx, 2])
     gt_queried_points = gt_points[K2]
-    gt_queried_points = gt_queried_points[::8]
+
+    #gt_queried_points = gt_queried_points[::8]
 
     if queried_points.shape[0] == 0 or gt_queried_points.shape[0] == 0:
         print(f"Processing class {query[i]}: No query point for pred shape {queried_points.shape[0]} and GT shape {gt_queried_points.shape[0]}")
         continue
+
+    # 添加新的降采样逻辑：如果点数超过 MAX_POINTS，则随机采样到 MAX_POINTS
+    if queried_points.shape[0] > MAX_POINTS:
+        idx = np.random.choice(queried_points.shape[0], MAX_POINTS, replace=False)
+        queried_points = queried_points[idx]
+
+    if gt_queried_points.shape[0] > MAX_POINTS:
+        idx = np.random.choice(gt_queried_points.shape[0], MAX_POINTS, replace=False)
+        gt_queried_points = gt_queried_points[idx]
 
     cd = chamfer_distance(queried_points, gt_queried_points)
     cds.append(cd.item())

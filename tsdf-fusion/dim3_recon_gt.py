@@ -9,9 +9,9 @@ import numpy as np
 import fusion
 
 
-prefix = '/media/saimouli/RPNG_FLASH_4/datasets/Replica2/vmap/room_0/imap/00'
-color_prefix = '/media/saimouli/RPNG_FLASH_4/datasets/Replica2/vmap/room_0/imap/00/semantic_color'
-save_path = '/media/saimouli/Data6T/Replica/omni_data_result/room_0_small/2025-03-24-06-23-28/psnr/before_opt'
+prefix = '/data/houyj/robotics/data/vmap/room_0/imap/00'
+color_prefix = '/data/houyj/robotics/data/vmap/room_0/imap/00/semantic_color'
+save_path = "/data/houyj/robotics/online_lang_splatting/results/2-stage/room_0/2026-01-08-12-07-59/psnr/before_opt"
 
 if __name__ == "__main__":
   # ======================================================================================================== #
@@ -20,7 +20,7 @@ if __name__ == "__main__":
   # frustums in the dataset
   # ======================================================================================================== #
   print("Estimating voxel volume bounds...")
-  n_imgs = 10 #2000
+  n_imgs = 2000 #2000
   cam_extr = np.loadtxt(f"{prefix}/traj_w_c.txt", delimiter=' ').reshape(-1, 4, 4)
   cam_intr = np.array([
     [600.0, 0, 599.5],

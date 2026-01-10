@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=3 python tsdf-fusion/3d_evaluation_and_visualize_langslam_dim15.py \

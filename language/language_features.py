@@ -7,6 +7,8 @@ language features from images at different resolutions.
 """
 
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+
 import sys
 import glob
 import argparse
@@ -99,6 +101,9 @@ def plot_lang_heatmap(
     text: str,
     device: str = "cuda",
     save_path: Optional[str] = None,
+    store_img: bool = False,
+    threshold: float = 0.0,
+    composited_save_path: Optional[str] = None,
 ) -> None:
     """
     Plot language feature heatmaps for both low and high resolution features.
@@ -110,16 +115,59 @@ def plot_lang_heatmap(
         text: Query text for similarity visualization
         device: Computation device
         save_path: Path to save the visualization (None to display)
+        store_img: If True, save only the high-res heatmap directly without plotting
+        threshold: similarity threshold (0-1), values below this will be cool colors
+        composited_save_path: Path to save the composited image (GT + Heatmap)
     """
     # Get text embeddings and compute similarity
     text_embs = get_user_embed(text=text, device=device)
     sim_norm_low_res = perform_similarity(lowres[0].permute(1, 2, 0), text_embs)
     sim_norm_high_res = perform_similarity(highres[0].permute(1, 2, 0), text_embs)
 
+    # Apply thresholding strategies
+    if threshold > 0:
+        # Re-normalize: map [threshold, 1] to [0, 1], map [0, threshold] to 0
+        sim_norm_low_res = (sim_norm_low_res - threshold) / (1 - threshold + 1e-6)
+        sim_norm_low_res = torch.clamp(sim_norm_low_res, min=0.0)
+        
+        sim_norm_high_res = (sim_norm_high_res - threshold) / (1 - threshold + 1e-6)
+        sim_norm_high_res = torch.clamp(sim_norm_high_res, min=0.0)
+
     # Create heatmap visualizations
     cmap = plt.get_cmap("turbo")
     heatmap_low_res = cmap(sim_norm_low_res.detach().cpu().numpy())
     heatmap_high_res = cmap(sim_norm_high_res.detach().cpu().numpy())
+
+    # Generate Composited Image if requested
+    if composited_save_path:
+        # Resize similarity map to match original image dimensions
+        H, W = img.shape[1], img.shape[2]
+        sim_map = sim_norm_high_res.unsqueeze(0).unsqueeze(0) # (1, 1, Hf, Wf)
+        sim_map_resized = F.interpolate(sim_map, size=(H, W), mode='bilinear', align_corners=False)
+        sim_map_resized = sim_map_resized.squeeze() # (H, W)
+        
+        # Get heatmap RGB at full resolution
+        sim_resized_np = sim_map_resized.detach().cpu().numpy()
+        heatmap_rgb = cmap(sim_resized_np)[..., :3] # (H, W, 3)
+        
+        # Get original image normalized [0, 1]
+        img_np = img.permute(1, 2, 0).detach().cpu().numpy() / 255.0
+        
+        # Alpha blending: using similarity score as opacity
+        # Low similarity -> Alpha ~ 0 -> Shows Original Image
+        # High similarity -> Alpha ~ 1 -> Shows Heatmap
+        alpha = sim_resized_np[..., None]
+        composite = (1 - alpha) * img_np + alpha * heatmap_rgb
+        composite = np.clip(composite, 0, 1)
+        
+        plt.imsave(composited_save_path, composite)
+        print(f"Saved composited visualization to {composited_save_path}")
+
+    if store_img:
+        if save_path:
+            plt.imsave(save_path, heatmap_high_res)
+            print(f"Saved high-res heatmap to {save_path}")
+        return
 
     # Create figure with three subplots
     fig, ax = plt.subplots(1, 3, figsize=(15, 5))
@@ -152,7 +200,11 @@ def plot_lang_heatmap(
 
 @torch.no_grad()
 def plot_features(
-    img: torch.Tensor, lowres: torch.Tensor, highres: torch.Tensor, save_path: Optional[str] = None
+    img: torch.Tensor, 
+    lowres: torch.Tensor, 
+    highres: torch.Tensor, 
+    save_path: Optional[str] = None,
+    store_img: bool = False,
 ) -> None:
     """
     Plot PCA visualizations of language features at different resolutions.
@@ -162,7 +214,15 @@ def plot_features(
         lowres: Low-resolution language features
         highres: High-resolution language features
         save_path: Path to save the visualization (None to display)
+        store_img: If True, save only the high-res feature PCA directly without plotting
     """
+    if store_img:
+        highres_pca = apply_pca_colormap(highres.permute(0, 2, 3, 1)).detach().cpu()
+        if save_path:
+            plt.imsave(save_path, highres_pca[0].numpy())
+            print(f"Saved high-res feature PCA to {save_path}")
+        return
+
     # Create figure with three subplots
     fig, ax = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -217,6 +277,7 @@ def get_hr_feats(
 
     # Save features if output directory is provided
     if output_dir:
+        output_dir = os.path.join(output_dir, "features")
         os.makedirs(output_dir, exist_ok=True)
         base_name = os.path.splitext(os.path.basename(filename))[0]
 
@@ -270,6 +331,8 @@ def process_image(
     query_text: str = "floor",
     device: str = "cuda",
     visualize: bool = True,
+    store_img: bool = False,
+    sim_threshold: float = 0.0,
 ) -> None:
     """
     Process a single image through the feature extraction pipeline.
@@ -279,11 +342,12 @@ def process_image(
         model_super: High-resolution language model
         model_lang: Base language model
         aug: Image augmentation transform
-        auto_model: Autoencoder model for dimensionality reduction
         output_dir: Directory to save features and visualizations
         query_text: Text query for similarity visualization
         device: Computation device
         visualize: Whether to generate visualizations
+        store_img: Whether to directly save images to subfolders
+        sim_threshold: Threshold for heatmap visualization
     """
     print(f"Processing image: {filename}")
 
@@ -307,18 +371,40 @@ def process_image(
 
     # Generate visualizations if requested
     image_RGB = image[[2, 1, 0], :, :]
-    if visualize:
+    if visualize or store_img:
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
             base_name = os.path.splitext(os.path.basename(filename))[0]
-            features_path = os.path.join(output_dir, f"{base_name}_features.png")
-            heatmap_path = os.path.join(output_dir, f"{base_name}_heatmap_{query_text}.png")
+            
+            if store_img:
+                feat_dir = os.path.join(output_dir, "features_img")
+                heatmap_dir = os.path.join(output_dir, "heatmap")
+                composited_dir = os.path.join(output_dir, "composited")
+                
+                os.makedirs(feat_dir, exist_ok=True)
+                os.makedirs(heatmap_dir, exist_ok=True)
+                os.makedirs(composited_dir, exist_ok=True)
+                
+                features_path = os.path.join(feat_dir, f"{base_name}.png")
+                heatmap_path = os.path.join(heatmap_dir, f"{base_name}_{query_text}.png")
+                composited_path = os.path.join(composited_dir, f"{base_name}_{query_text}.png")
+            else:
+                features_path = os.path.join(output_dir, f"{base_name}_features.png")
+                heatmap_path = os.path.join(output_dir, f"{base_name}_heatmap_{query_text}.png")
+                composited_path = None
         else:
             features_path = None
             heatmap_path = None
+            composited_path = None
 
         # Plot feature visualizations
-        plot_features(image_RGB, feat_lang["clip_vis_dense"], high_res_lang, save_path=features_path)
+        plot_features(
+            image_RGB, 
+            feat_lang["clip_vis_dense"], 
+            high_res_lang, 
+            save_path=features_path,
+            store_img=store_img
+        )
 
         # Plot language heatmap visualizations
         plot_lang_heatmap(
@@ -328,6 +414,9 @@ def process_image(
             text=query_text,
             device=device,
             save_path=heatmap_path,
+            store_img=store_img,
+            threshold=sim_threshold,
+            composited_save_path=composited_path,
         )
 
 
@@ -346,6 +435,8 @@ def parse_args():
     # Visualization options
     parser.add_argument("--query-text", type=str, default="teddybear", help="Text query for similarity visualization")
     parser.add_argument("--no-visualize", action="store_true", help="Disable visualization generation")
+    parser.add_argument("--store-img", action="store_true", help="Directly save feature and heatmap images to subfolders without plotting")
+    parser.add_argument("--sim-threshold", type=float, default=0.4, help="Similarity threshold for heatmaps (default: 0.4). Higher means fewer red areas.")
 
     # Device
     parser.add_argument("--device", type=str, default="cuda", help="Computation device (cuda or cpu)")
@@ -377,16 +468,27 @@ def main():
                 model_super,
                 model_lang,
                 aug,
-                auto_model,
+                #auto_model,
                 args.output_dir,
                 args.query_text,
                 device,
                 not args.no_visualize,
+                args.store_img,
+                args.sim_threshold,
             )
     else:
         # Process single image
         process_image(
-            args.input, model_super, model_lang, aug, args.output_dir, args.query_text, device, not args.no_visualize
+            args.input, 
+            model_super, 
+            model_lang, 
+            aug, 
+            args.output_dir, 
+            args.query_text, 
+            device, 
+            not args.no_visualize,
+            args.store_img,
+            args.sim_threshold,
         )
 
     print("Processing complete!")

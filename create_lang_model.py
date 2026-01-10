@@ -1,3 +1,7 @@
+import os
+import sys
+
+
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
 from detectron2.projects.deeplab import add_deeplab_config
@@ -10,7 +14,6 @@ import numpy as np
 import cv2
 import argparse
 import torch
-import os
 import open_clip
 import tqdm
 import time

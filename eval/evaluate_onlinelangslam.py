@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com" 
+
 import glob
 import random
 from collections import defaultdict

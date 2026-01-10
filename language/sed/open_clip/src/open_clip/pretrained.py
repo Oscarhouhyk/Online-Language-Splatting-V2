@@ -1,5 +1,7 @@
 import hashlib
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+
 import urllib
 import warnings
 from functools import partial

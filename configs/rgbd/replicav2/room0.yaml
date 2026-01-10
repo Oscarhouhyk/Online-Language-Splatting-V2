@@ -15,8 +15,8 @@ Training:
 language:
   labels_from_file: False # if True, will load labels from a file (can be low res or high res langsplat labels) instead of running online language model
   language_train: True # if True, will train for the language
-  single_stage_ae: True # if True, will use cross-data ae (pretrained on cross-data of replica), if false will use a 2-stage ae
-  auto_ckpt_path: "/data/houyj/robotics/online_lang_splatting/pretrained_models/single_stage_cross_domain_omni/run1_office0_room0/checkpoints/epoch%3D59-step%3D2520.ckpt" #uncomment this to use the pretrained model
+  single_stage_ae: False # if True, will use cross-data ae (pretrained on cross-data of replica), if false will use a 2-stage ae
+  auto_ckpt_path: "/data/houyj/robotics/online_lang_splatting/pretrained_models/omni_general/ae_149_he.ckpt" #uncomment this to use the pretrained model
   hr_model: True
   lang_code_size: 15
   online_ckpt_path: "/data/houyj/robotics/online_lang_splatting/output/omni_data_result/online_15_room0.pth"

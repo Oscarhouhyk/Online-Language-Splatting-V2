@@ -1,6 +1,6 @@
 inherit_from: "configs/rgbd/replicav2/base_config.yaml"
 Dataset:
-  dataset_path: "/datasets/langslam/vmap/office_4/imap/00"
+  dataset_path: "/data/houyj/robotics/data/vmap/office_4/imap/00"
   single_thread: True
 Training:
   kf_interval: 4
@@ -13,8 +13,8 @@ Training:
 language:
   labels_from_file: False # if True, will load labels from a file (can be low res or high res langsplat labels) instead of running online language model
   language_train: True # if True, will train for the language
-  single_stage_ae: True # if True, will use cross-data ae (pretrained on cross-data of replica), if false will use a 2-stage ae
-  auto_ckpt_path: "/home/autoencoder_coco_cross/mlp_run1/checkpoints/epoch=133-step=2948.ckpt" #uncomment this to use the pretrained model
+  single_stage_ae: False # if True, will use cross-data ae (pretrained on cross-data of replica), if false will use a 2-stage ae
+  auto_ckpt_path: "/data/houyj/robotics/online_lang_splatting/pretrained_models/omni_general/ae_149_he.ckpt" #uncomment this to use the pretrained model
   hr_model: True
   lang_code_size: 15
-  online_ckpt_path: "/media/Replica/omni_data_result/online_15_office4.pth"
+  online_ckpt_path: "/data/houyj/robotics/online_lang_splatting/output/omni_data_result/online_15_office4.pth"

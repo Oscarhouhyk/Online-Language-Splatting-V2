@@ -442,50 +442,104 @@ class TSDFVolume:
                             )
         )
     else:  # CPU mode: integrate voxel volume (vectorized implementation)
-      pass
-      # Convert voxel grid coordinates to pixel coordinates
-    #   cam_pts = self.vox2world(self._vol_origin, self.vox_coords, self._voxel_size)
-    #   cam_pts = rigid_transform(cam_pts, np.linalg.inv(cam_pose))
-    #   pix_z = cam_pts[:, 2]
-    #   pix = self.cam2pix(cam_pts, cam_intr)
-    #   pix_x, pix_y = pix[:, 0], pix[:, 1]
+      #pass
+
+      cam_pts = self.vox2world(self._vol_origin, self.vox_coords, self._voxel_size)
+      cam_pts = rigid_transform(cam_pts, np.linalg.inv(cam_pose))
+      pix_z = cam_pts[:, 2]
+      pix = self.cam2pix(cam_pts, cam_intr)
+      pix_x, pix_y = pix[:, 0], pix[:, 1]
 
       # Eliminate pixels outside view frustum
-    #   valid_pix = np.logical_and(pix_x >= 0,
-    #               np.logical_and(pix_x < im_w,
-    #               np.logical_and(pix_y >= 0,
-    #               np.logical_and(pix_y < im_h,
-    #               pix_z > 0))))
-    #   depth_val = np.zeros(pix_x.shape)
-    #   depth_val[valid_pix] = depth_im[pix_y[valid_pix], pix_x[valid_pix]]
+      valid_pix = np.logical_and(pix_x >= 0,
+                  np.logical_and(pix_x < im_w,
+                  np.logical_and(pix_y >= 0,
+                  np.logical_and(pix_y < im_h,
+                  pix_z > 0))))
+      depth_val = np.zeros(pix_x.shape)
+      depth_val[valid_pix] = depth_im[pix_y[valid_pix], pix_x[valid_pix]]
 
       # Integrate TSDF
-    #   depth_diff = depth_val - pix_z
-    #   valid_pts = np.logical_and(depth_val > 0, depth_diff >= -self._trunc_margin)
-    #   dist = np.minimum(1, depth_diff / self._trunc_margin)
-    #   valid_vox_x = self.vox_coords[valid_pts, 0]
-    #   valid_vox_y = self.vox_coords[valid_pts, 1]
-    #   valid_vox_z = self.vox_coords[valid_pts, 2]
-    #   w_old = self._weight_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
-    #   tsdf_vals = self._tsdf_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
-    #   valid_dist = dist[valid_pts]
-    #   tsdf_vol_new, w_new = self.integrate_tsdf(tsdf_vals, valid_dist, w_old, obs_weight)
-    #   self._weight_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = w_new
-    #   self._tsdf_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = tsdf_vol_new
+      depth_diff = depth_val - pix_z
+      valid_pts = np.logical_and(depth_val > 0, depth_diff >= -self._trunc_margin)
+      dist = np.minimum(1, depth_diff / self._trunc_margin)
+      valid_vox_x = self.vox_coords[valid_pts, 0]
+      valid_vox_y = self.vox_coords[valid_pts, 1]
+      valid_vox_z = self.vox_coords[valid_pts, 2]
+      w_old = self._weight_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
+      tsdf_vals = self._tsdf_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
+      valid_dist = dist[valid_pts]
+      tsdf_vol_new, w_new = self.integrate_tsdf(tsdf_vals, valid_dist, w_old, obs_weight)
+      self._weight_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = w_new
+      self._tsdf_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = tsdf_vol_new
 
       # Integrate color
-    #   old_color = self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
-    #   old_b = np.floor(old_color / self._color_const)
-    #   old_g = np.floor((old_color-old_b*self._color_const)/256)
-    #   old_r = old_color - old_b*self._color_const - old_g*256
-    #   new_color = color_im[pix_y[valid_pts],pix_x[valid_pts]]
-    #   new_b = np.floor(new_color / self._color_const)
-    #   new_g = np.floor((new_color - new_b*self._color_const) /256)
-    #   new_r = new_color - new_b*self._color_const - new_g*256
-    #   new_b = np.minimum(255., np.round((w_old*old_b + obs_weight*new_b) / w_new))
-    #   new_g = np.minimum(255., np.round((w_old*old_g + obs_weight*new_g) / w_new))
-    #   new_r = np.minimum(255., np.round((w_old*old_r + obs_weight*new_r) / w_new))
-    #   self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self._color_const + new_g*256 + new_r
+      # Note: The original code only handled one color channel or packed RGB. 
+      # Since you have 15 channels, we need to update this part to handle all of them.
+      # However, the commented out code only handles one channel logic (RGB packed).
+      # We need to adapt it for 15 channels similar to the GPU kernel.
+      
+      # Let's implement a loop for the 15 channels
+      color_channels = [color_im_1, color_im_2, color_im_3, color_im_4, color_im_5, 
+                        color_im_6, color_im_7, color_im_8, color_im_9, color_im_10, 
+                        color_im_11, color_im_12, color_im_13, color_im_14, color_im_15]
+      
+      cpu_color_vols = [self._color_vol_cpu_1, self._color_vol_cpu_2, self._color_vol_cpu_3,
+                        self._color_vol_cpu_4, self._color_vol_cpu_5, self._color_vol_cpu_6,
+                        self._color_vol_cpu_7, self._color_vol_cpu_8, self._color_vol_cpu_9,
+                        self._color_vol_cpu_10, self._color_vol_cpu_11, self._color_vol_cpu_12,
+                        self._color_vol_cpu_13, self._color_vol_cpu_14, self._color_vol_cpu_15]
+
+      for i in range(15):
+          old_color = cpu_color_vols[i][valid_vox_x, valid_vox_y, valid_vox_z]
+          new_color = color_channels[i][pix_y[valid_pts], pix_x[valid_pts]]
+          new_color = (old_color * w_old + obs_weight * new_color) / w_new
+          cpu_color_vols[i][valid_vox_x, valid_vox_y, valid_vox_z] = new_color
+
+
+      # Convert voxel grid coordinates to pixel coordinates
+      """ cam_pts = self.vox2world(self._vol_origin, self.vox_coords, self._voxel_size)
+      cam_pts = rigid_transform(cam_pts, np.linalg.inv(cam_pose))
+      pix_z = cam_pts[:, 2]
+      pix = self.cam2pix(cam_pts, cam_intr)
+      pix_x, pix_y = pix[:, 0], pix[:, 1]
+
+      # Eliminate pixels outside view frustum
+      valid_pix = np.logical_and(pix_x >= 0,
+                  np.logical_and(pix_x < im_w,
+                  np.logical_and(pix_y >= 0,
+                  np.logical_and(pix_y < im_h,
+                  pix_z > 0))))
+      depth_val = np.zeros(pix_x.shape)
+      depth_val[valid_pix] = depth_im[pix_y[valid_pix], pix_x[valid_pix]]
+
+      # Integrate TSDF
+      depth_diff = depth_val - pix_z
+      valid_pts = np.logical_and(depth_val > 0, depth_diff >= -self._trunc_margin)
+      dist = np.minimum(1, depth_diff / self._trunc_margin)
+      valid_vox_x = self.vox_coords[valid_pts, 0]
+      valid_vox_y = self.vox_coords[valid_pts, 1]
+      valid_vox_z = self.vox_coords[valid_pts, 2]
+      w_old = self._weight_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
+      tsdf_vals = self._tsdf_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
+      valid_dist = dist[valid_pts]
+      tsdf_vol_new, w_new = self.integrate_tsdf(tsdf_vals, valid_dist, w_old, obs_weight)
+      self._weight_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = w_new
+      self._tsdf_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = tsdf_vol_new
+
+      # Integrate color
+      old_color = self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
+      old_b = np.floor(old_color / self._color_const)
+      old_g = np.floor((old_color-old_b*self._color_const)/256)
+      old_r = old_color - old_b*self._color_const - old_g*256
+      new_color = color_im[pix_y[valid_pts],pix_x[valid_pts]]
+      new_b = np.floor(new_color / self._color_const)
+      new_g = np.floor((new_color - new_b*self._color_const) /256)
+      new_r = new_color - new_b*self._color_const - new_g*256
+      new_b = np.minimum(255., np.round((w_old*old_b + obs_weight*new_b) / w_new))
+      new_g = np.minimum(255., np.round((w_old*old_g + obs_weight*new_g) / w_new))
+      new_r = np.minimum(255., np.round((w_old*old_r + obs_weight*new_r) / w_new))
+      self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self._color_const + new_g*256 + new_r """
 
   def get_volume(self):
     if self.gpu_mode:
