@@ -52,6 +52,7 @@ class GoatcoreParser:
         self.depth_paths = natsorted(glob.glob(f"{self.input_folder}/depth/img*.npy"))
         self.n_img = len(self.color_paths)
         self.load_poses(f"{self.input_folder}/local_pos.txt")
+
     def load_poses(self, path):
         self.poses = []
         with open(path, "r") as f:
@@ -61,13 +62,20 @@ class GoatcoreParser:
         for i in range(self.n_img):
             line = lines[i]
             line_vals = np.array(list(map(float, line.split())))
-            quat = line_vals[1:5]
+            # local_pos.txt: id w x y z tx ty tz
+            # quaternion_to_rotation_matrix expects: x y z w
+            quat = line_vals[[2, 3, 4, 1]] 
             trans = line_vals[5:8]
-            T = trimesh.transformations.quaternion_matrix(np.roll(quat, 1))
+            
+            R = self.quaternion_to_rotation_matrix(quat)
+            T = np.eye(4)
+            T[:3, :3] = R
             T[:3, 3] = trans
-            pose = np.linalg.inv(T)
-            #print(pose)
+            
+            pose = T
+            
             self.poses.append(pose)
+            
             frame = {
                 "file_path": self.color_paths[i],
                 "depth_path": self.depth_paths[i],
@@ -76,6 +84,20 @@ class GoatcoreParser:
 
             frames.append(frame)
         self.frames = frames
+    
+    def quaternion_to_rotation_matrix(self, q):
+        x = q[0]
+        y = q[1]
+        z = q[2]
+        w = q[3]
+        R = np.array(
+            [
+                [1 - 2 * y**2 - 2 * z**2, 2 * x * y - 2 * z * w, 2 * x * z + 2 * y * w],
+                [2 * x * y + 2 * z * w, 1 - 2 * x**2 - 2 * z**2, 2 * y * z - 2 * x * w],
+                [2 * x * z - 2 * y * w, 2 * y * z + 2 * x * w, 1 - 2 * x**2 - 2 * y**2],
+            ]
+        )
+        return R
     
 
 
@@ -106,6 +128,8 @@ class ReplicaParserv2:
 
             frames.append(frame)
         self.frames = frames
+
+    
 
 
 class TUMParser:

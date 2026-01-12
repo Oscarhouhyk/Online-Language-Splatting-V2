@@ -16,8 +16,8 @@ Dataset:
   Calibration:
     fx: 388.19
     fy: 388.19
-    cx: 320.0
-    cy: 240.0
+    cx: 319.5
+    cy: 239.5
     k1: 0.0
     k2: 0.0
     p1: 0.0
@@ -25,7 +25,7 @@ Dataset:
     k3: 0.0
     width: 640
     height: 480
-    depth_scale: 1000.0
+    depth_scale: 1.0
     distorted: False
 
 Training:
