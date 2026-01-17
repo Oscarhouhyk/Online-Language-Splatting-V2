@@ -59,6 +59,8 @@ bash run_recon_mesh.sh
 运行后会在指定目录得到文件
 
 ## 项目运行：GOAT-core
+新增配置文件位于 ```configs/rgbd/goatcore```，包含 ```base_config.yaml``` 以及 ```4ok.yaml```
+
 1. Running the Online CLIP model to test lauguage features (demo)
 ```bash
 bash run_lang_features_goatcore.sh
