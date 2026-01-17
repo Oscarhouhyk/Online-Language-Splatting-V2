@@ -9,10 +9,10 @@ Results:
   use_gui: False
 
 Training:
-  kf_interval: 4
-  mapping_itr_num: 150
-  gaussian_update_every: 150
-  gaussian_update_offset: 50
+  kf_interval: 2
+  mapping_itr_num: 50
+  gaussian_update_every: 50
+  gaussian_update_offset: 20
   gaussian_reset: 2001
   size_threshold: 20
   use_gt_pose: True

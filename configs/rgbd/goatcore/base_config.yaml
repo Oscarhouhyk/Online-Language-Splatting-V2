@@ -3,7 +3,7 @@ Results:
   save_dir: "/data/houyj/robotics/online_lang_splatting/results/2-stage"
   save_trj: False
   save_trj_kf_intv: 20
-  use_gui: False
+  use_gui: True
   eval_rendering: True
 
 Dataset:

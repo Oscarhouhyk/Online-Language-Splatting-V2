@@ -72,6 +72,10 @@ class GoatcoreParser:
             T[:3, :3] = R
             T[:3, 3] = trans
             
+            # The system expects World-to-Camera (View) matrices.
+            # local_pos.txt provides Camera-to-World (Pose).
+            # We must invert it.
+            #pose = np.linalg.inv(T)
             pose = T
             
             self.poses.append(pose)

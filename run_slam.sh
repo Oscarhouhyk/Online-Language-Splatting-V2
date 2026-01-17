@@ -1,2 +1,2 @@
-CUDA_VISIBLE_DEVICES=3 python slam.py \
+CUDA_VISIBLE_DEVICES=4 python slam.py \
  --config configs/rgbd/goatcore/4ok.yaml \
